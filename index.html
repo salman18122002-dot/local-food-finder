@@ -441,21 +441,7 @@
 <body>
 
 <!-- API KEY MODAL -->
-<div class="modal-overlay" id="apiModal">
-  <div class="modal">
-    <h2>🔑 API Key Required</h2>
-    <p>This app uses the Google Places API & Google Maps to find restaurants. Enter your API key to get started — it's stored only in your browser.</p>
-    <label>Google Maps / Places API Key</label>
-    <input type="password" id="apiKeyInput" placeholder="AIzaSy..." />
-    <div class="modal-actions">
-      <button class="btn-primary" onclick="saveApiKey()">Save & Continue</button>
-      <button class="btn-secondary" onclick="useDemoMode()">Demo Mode</button>
-    </div>
-    <p class="modal-hint">
-      Don't have a key? <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">Get one free from Google Cloud Console</a>. Enable <strong>Places API</strong> and <strong>Maps JavaScript API</strong>.
-    </p>
-  </div>
-</div>
+
 
 <!-- HEADER -->
 <header>
@@ -544,39 +530,22 @@
   ];
 
   // ─── API KEY MANAGEMENT ──────────────────────────────────────────────────────
-  function saveApiKey() {
-    const key = document.getElementById('apiKeyInput').value.trim();
-    if (!key) { alert('Please enter an API key.'); return; }
-    GOOGLE_API_KEY = key;
-    localStorage.setItem('gmap_api_key', key);
-    closeModalAndLoad();
-  }
 
-  function useDemoMode() {
-    isDemoMode = true;
-    closeModalAndLoad();
-  }
 
   function closeModalAndLoad() {
     document.getElementById('apiModal').style.display = 'none';
     if (!isDemoMode) loadGoogleMaps();
   }
 
-  window.onload = () => {
-    const saved = localStorage.getItem('gmap_api_key');
-    if (saved) {
-      GOOGLE_API_KEY = saved;
-      document.getElementById('apiKeyInput').value = saved;
-      document.getElementById('apiModal').style.display = 'none';
-      loadGoogleMaps();
-    }
-    document.getElementById('cityInput').focus();
-  };
+window.onload = () => {
+  loadGoogleMaps();
+  document.getElementById('cityInput').focus();
+};
 
   // ─── LOAD GOOGLE MAPS ────────────────────────────────────────────────────────
   function loadGoogleMaps() {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=places&callback=initMap`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAetQE52fx-G5hDn0QLq0L1ZgT2RNbxE1U&libraries=places&callback=initMap`;
     script.async = true;
     script.onerror = () => {
       alert('Failed to load Google Maps. Please check your API key.');
