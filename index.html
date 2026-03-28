@@ -601,8 +601,13 @@
 
   // ─── SEARCH ──────────────────────────────────────────────────────────────────
   function search() {
-    const city = document.getElementById('cityInput').value.trim();
-    if (!city) { alert('Please enter a city or location.'); return; }
+  const city = document.getElementById('cityInput').value.trim();
+  if (!city) { alert('Please enter a city or location.'); return; }
+
+  if (isDemoMode === false && !geocoder) {
+    alert('Google Maps is still loading. Please wait a moment and try again, or check your API key.');
+    return;
+  }
 
     const btn = document.getElementById('searchBtn');
     btn.disabled = true;
