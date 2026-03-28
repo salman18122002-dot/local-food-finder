@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Local Food Finder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0f0d0a;
+      --surface: #1a1612;
+      --card: #221e18;
+      --accent: #e8a045;
+      --accent2: #c0622a;
+      --text: #f0ebe2;
+      --muted: #9a9080;
+      --border: #2e2820;
+      --tag-bg: #2a2218;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    header {
+      position: relative;
+      padding: 60px 40px 40px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #1a1208 0%, #0f0d0a 60%, #1c100a 100%);
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(232,160,69,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    header::after {
+      content: '🍽';
+      position: absolute;
+      right: 60px; top: 30px;
+      font-size: 120px;
+      opacity: 0.07;
+      transform: rotate(-15deg);
+    }
+
+    .header-inner { max-width: 1100px; margin: 0 auto; }
+
+    .tagline {
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.05;
+      color: var(--text);
+    }
+    h1 span {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .subtitle {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 300;
+      max-width: 480px;
+    }
+
+    /* API KEY NOTICE */
+    #api-notice {
+      background: linear-gradient(90deg, #2a1a08, #1e1408);
+      border: 1px solid var(--accent2);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 30px 0 0;
+      font-size: 13px;
+      color: #d4a060;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    #api-notice .icon { font-size: 18px; flex-shrink: 0; }
+    #api-notice a { color: var(--accent); text-decoration: underline; }
+    #api-notice code {
+      background: #0f0d0a;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--accent);
+      font-family: monospace;
+    }
+
+    /* SEARCH BAR */
+    .search-wrap {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 40px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .search-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-field {
+      flex: 1 1 260px;
+      position: relative;
+    }
+    .search-field input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px 14px 48px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-field input:focus { border-color: var(--accent); }
+    .search-field input::placeholder { color: var(--muted); }
+    .search-icon {
+      position: absolute;
+      left: 16px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 18px;
+      pointer-events: none;
+    }
+
+    select {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .btn-search {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 10px;
+      padding: 14px 28px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn-search:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-search:active { transform: translateY(0); }
+    .btn-search:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* MAIN LAYOUT */
+    .main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 36px 40px;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 32px;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; padding: 24px 20px; }
+      .search-wrap { padding: 20px; }
+      header { padding: 40px 20px 30px; }
+    }
+
+    /* MAP */
+    .map-panel {
+      position: sticky;
+      top: 96px;
+    }
+    .map-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    #map {
+      width: 100%;
+      height: 420px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      overflow: hidden;
+    }
+    .map-placeholder {
+      width: 100%;
+      height: 420px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+    }
+    .map-placeholder .map-icon { font-size: 48px; opacity: 0.4; }
+    .map-placeholder p { font-size: 14px; }
+
+    /* RESULTS PANEL */
+    .results-panel {}
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .results-count {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .results-count span { color: var(--accent); }
+
+    /* CARDS */
+    .cards { display: flex; flex-direction: column; gap: 16px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      animation: slideUp 0.4s ease both;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(232,160,69,0.08);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .card-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text);
+    }
+
+    .rating-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(232,160,69,0.12);
+      border: 1px solid rgba(232,160,69,0.25);
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .rating-badge .star { color: var(--accent); font-size: 13px; }
+    .rating-badge .score { font-size: 13px; font-weight: 500; color: var(--accent); }
+    .rating-badge .count { font-size: 11px; color: var(--muted); }
+
+    .card-address {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: capitalize;
+    }
+    .tag.open { color: #6ccb7a; border-color: rgba(108,203,122,0.3); background: rgba(108,203,122,0.07); }
+    .tag.closed { color: #e06060; border-color: rgba(224,96,96,0.3); background: rgba(224,96,96,0.07); }
+
+    /* STARS ROW */
+    .stars-row { display: flex; gap: 2px; margin-top: 10px; }
+    .stars-row span { font-size: 13px; }
+
+    /* STATES */
+    .state-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      gap: 16px;
+      text-align: center;
+    }
+    .state-box .state-icon { font-size: 52px; opacity: 0.5; }
+    .state-box h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--text);
+    }
+    .state-box p { color: var(--muted); font-size: 14px; max-width: 300px; }
+
+    /* SPINNER */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* CONFIG MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 36px;
+      max-width: 500px;
+      width: 100%;
+    }
+    .modal h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    .modal p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .modal label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+    .modal input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      margin-bottom: 20px;
+    }
+    .modal input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 10px; }
+    .btn-primary {
+      flex: 1;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .modal-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 14px;
+    }
+    .modal-hint a { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <h2>🔑 API Key Required</h2>
+    <p>This app uses the Google Places API & Google Maps to find restaurants. Enter your API key to get started — it's stored only in your browser.</p>
+    <label>Google Maps / Places API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="AIzaSy..." />
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveApiKey()">Save & Continue</button>
+      <button class="btn-secondary" onclick="useDemoMode()">Demo Mode</button>
+    </div>
+    <p class="modal-hint">
+      Don't have a key? <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">Get one free from Google Cloud Console</a>. Enable <strong>Places API</strong> and <strong>Maps JavaScript API</strong>.
+    </p>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <p class="tagline">Discover • Explore • Taste</p>
+    <h1>Local <span>Food Finder</span></h1>
+    <p class="subtitle">Find the best restaurants in any city — rated, mapped, and ready to visit.</p>
+  </div>
+</header>
+
+<!-- SEARCH BAR -->
+<div class="search-wrap">
+  <div class="search-inner">
+    <div class="search-field">
+      <span class="search-icon">📍</span>
+      <input type="text" id="cityInput" placeholder="Enter city or neighborhood... (e.g. Karachi, Tokyo)" onkeydown="if(event.key==='Enter') search()" />
+    </div>
+    <select id="cuisineFilter">
+      <option value="">All Cuisines</option>
+      <option value="pakistani">Pakistani</option>
+      <option value="chinese">Chinese</option>
+      <option value="italian">Italian</option>
+      <option value="indian">Indian</option>
+      <option value="american">American</option>
+      <option value="mexican">Mexican</option>
+      <option value="japanese">Japanese</option>
+      <option value="thai">Thai</option>
+      <option value="arabic">Arabic</option>
+      <option value="turkish">Turkish</option>
+    </select>
+    <select id="ratingFilter">
+      <option value="0">Any Rating</option>
+      <option value="3.5">3.5+ ⭐</option>
+      <option value="4">4.0+ ⭐</option>
+      <option value="4.5">4.5+ ⭐</option>
+    </select>
+    <button class="btn-search" id="searchBtn" onclick="search()">🔍 Find Restaurants</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+  <!-- RESULTS PANEL -->
+  <div class="results-panel">
+    <div id="resultsHeader" class="results-header" style="display:none">
+      <div class="results-count" id="resultsCount"></div>
+    </div>
+    <div id="cards" class="cards">
+      <!-- Initial state -->
+      <div class="state-box">
+        <div class="state-icon">🗺️</div>
+        <h3>Ready to Explore?</h3>
+        <p>Enter a city name and hit search to discover the best restaurants nearby.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP PANEL -->
+  <div class="map-panel">
+    <p class="map-label">Map View</p>
+    <div class="map-placeholder" id="mapPlaceholder">
+      <div class="map-icon">🌍</div>
+      <p>Map will appear after search</p>
+    </div>
+    <div id="map" style="display:none"></div>
+  </div>
+</div>
+
+<footer>
+  Built with ❤️ using <a href="https://developers.google.com/maps" target="_blank">Google Maps & Places API</a>
+</footer>
+
+<script>
+  let map, markers = [], placesService, geocoder;
+  let GOOGLE_API_KEY = '';
+  let isDemoMode = false;
+
+  // ─── DEMO DATA ───────────────────────────────────────────────────────────────
+  const DEMO_RESTAURANTS = [
+    { name: "The Golden Spoon", rating: 4.7, user_ratings_total: 1842, vicinity: "123 Main Street, City Center", types: ["restaurant","food"], opening_hours: { open_now: true }, lat: 0.01, lng: 0.01 },
+    { name: "Spice Garden", rating: 4.5, user_ratings_total: 983, vicinity: "45 Flavor Lane, Downtown", types: ["restaurant","indian_restaurant"], opening_hours: { open_now: true }, lat: 0.02, lng: -0.01 },
+    { name: "La Bella Pasta", rating: 4.3, user_ratings_total: 654, vicinity: "78 Olive Street, West Side", types: ["restaurant","italian_restaurant"], opening_hours: { open_now: false }, lat: -0.01, lng: 0.02 },
+    { name: "Dragon Palace", rating: 4.6, user_ratings_total: 2100, vicinity: "200 Dragon Ave, Chinatown", types: ["restaurant","chinese_restaurant"], opening_hours: { open_now: true }, lat: 0.015, lng: 0.015 },
+    { name: "Burger Republic", rating: 4.2, user_ratings_total: 3400, vicinity: "9 Beef Boulevard, East End", types: ["restaurant","fast_food"], opening_hours: { open_now: true }, lat: -0.02, lng: -0.02 },
+    { name: "Sushi Zen", rating: 4.8, user_ratings_total: 870, vicinity: "55 Sakura Road, Harbor District", types: ["restaurant","japanese_restaurant"], opening_hours: { open_now: false }, lat: 0.025, lng: -0.02 },
+  ];
+
+  // ─── API KEY MANAGEMENT ──────────────────────────────────────────────────────
+  function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key) { alert('Please enter an API key.'); return; }
+    GOOGLE_API_KEY = key;
+    localStorage.setItem('gmap_api_key', key);
+    closeModalAndLoad();
+  }
+
+  function useDemoMode() {
+    isDemoMode = true;
+    closeModalAndLoad();
+  }
+
+  function closeModalAndLoad() {
+    document.getElementById('apiModal').style.display = 'none';
+    if (!isDemoMode) loadGoogleMaps();
+  }
+
+  window.onload = () => {
+    const saved = localStorage.getItem('gmap_api_key');
+    if (saved) {
+      GOOGLE_API_KEY = saved;
+      document.getElementById('apiKeyInput').value = saved;
+      document.getElementById('apiModal').style.display = 'none';
+      loadGoogleMaps();
+    }
+    document.getElementById('cityInput').focus();
+  };
+
+  // ─── LOAD GOOGLE MAPS ────────────────────────────────────────────────────────
+  function loadGoogleMaps() {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=places&callback=initMap`;
+    script.async = true;
+    script.onerror = () => {
+      alert('Failed to load Google Maps. Please check your API key.');
+    };
+    document.head.appendChild(script);
+  }
+
+  window.initMap = function() {
+    geocoder = new google.maps.Geocoder();
+    const mapEl = document.getElementById('map');
+    mapEl.style.display = 'block';
+    document.getElementById('mapPlaceholder').style.display = 'none';
+
+    map = new google.maps.Map(mapEl, {
+      center: { lat: 24.8607, lng: 67.0011 },
+      zoom: 12,
+      styles: darkMapStyle,
+      disableDefaultUI: false,
+    });
+    placesService = new google.maps.places.PlacesService(map);
+  };
+
+  // ─── SEARCH ──────────────────────────────────────────────────────────────────
+  function search() {
+    const city = document.getElementById('cityInput').value.trim();
+    if (!city) { alert('Please enter a city or location.'); return; }
+
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Searching...';
+
+    showLoading();
+
+    if (isDemoMode) {
+      setTimeout(() => {
+        renderResults(DEMO_RESTAURANTS, city, { lat: 24.86, lng: 67.01 });
+        renderDemoMap({ lat: 24.86, lng: 67.01 }, DEMO_RESTAURANTS);
+        resetBtn();
+      }, 1200);
+      return;
+    }
+
+    geocoder.geocode({ address: city }, (results, status) => {
+      if (status !== 'OK' || !results.length) {
+        showError('City not found. Try a different name.');
+        resetBtn();
+        return;
+      }
+      const location = results[0].geometry.location;
+      const cuisine = document.getElementById('cuisineFilter').value;
+
+      const request = {
+        location,
+        radius: 5000,
+        type: 'restaurant',
+        keyword: cuisine || undefined,
+      };
+
+      placesService.nearbySearch(request, (places, status) => {
+        resetBtn();
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !places.length) {
+          showError('No restaurants found. Try a different city or cuisine.');
+          return;
+        }
+
+        const minRating = parseFloat(document.getElementById('ratingFilter').value) || 0;
+        const filtered = places
+          .filter(p => p.rating && p.rating >= minRating)
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+          .slice(0, 15);
+
+        const center = { lat: location.lat(), lng: location.lng() };
+        renderResults(filtered, city, center);
+        updateMap(filtered, center);
+      });
+    });
+  }
+
+  function resetBtn() {
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = false;
+    btn.textContent = '🔍 Find Restaurants';
+  }
+
+  // ─── RENDER RESULTS ──────────────────────────────────────────────────────────
+  function renderResults(places, city, center) {
+    const cards = document.getElementById('cards');
+    const header = document.getElementById('resultsHeader');
+    const count = document.getElementById('resultsCount');
+
+    header.style.display = 'flex';
+    count.innerHTML = `<span>${places.length}</span> restaurants near ${city}`;
+
+    cards.innerHTML = '';
+    places.forEach((p, i) => {
+      const card = buildCard(p, i);
+      cards.appendChild(card);
+    });
+  }
+
+  function buildCard(place, index) {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.animationDelay = `${index * 0.06}s`;
+
+    const rating = place.rating || 0;
+    const count = place.user_ratings_total ? `(${place.user_ratings_total.toLocaleString()})` : '';
+    const isOpen = place.opening_hours?.open_now;
+    const openTag = isOpen !== undefined
+      ? `<span class="tag ${isOpen ? 'open' : 'closed'}">${isOpen ? '🟢 Open Now' : '🔴 Closed'}</span>`
+      : '';
+
+    const types = (place.types || [])
+      .filter(t => !['restaurant','food','point_of_interest','establishment'].includes(t))
+      .slice(0, 2)
+      .map(t => `<span class="tag">${t.replace(/_/g, ' ')}</span>`)
+      .join('');
+
+    const stars = renderStars(rating);
+
+    div.innerHTML = `
+      <div class="card-header">
+        <div class="card-name">${place.name}</div>
+        <div class="rating-badge">
+          <span class="star">★</span>
+          <span class="score">${rating.toFixed(1)}</span>
+          <span class="count">${count}</span>
+        </div>
+      </div>
+      <div class="card-address">📍 ${place.vicinity || 'Address unavailable'}</div>
+      <div class="stars-row">${stars}</div>
+      <div class="card-tags" style="margin-top:12px">
+        ${openTag}
+        ${types}
+      </div>
+    `;
+
+    div.onclick = () => {
+      if (!isDemoMode && map && place.geometry) {
+        map.setCenter(place.geometry.location);
+        map.setZoom(16);
+        markers.forEach((m, i) => {
+          if (i === index) m.setAnimation(google.maps.Animation.BOUNCE);
+          else m.setAnimation(null);
+        });
+        setTimeout(() => markers[index]?.setAnimation(null), 2000);
+      }
+    };
+
+    return div;
+  }
+
+  function renderStars(rating) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+      if (rating >= i) html += '<span style="color:#e8a045">★</span>';
+      else if (rating >= i - 0.5) html += '<span style="color:#e8a045">½</span>';
+      else html += '<span style="color:#3a342c">★</span>';
+    }
+    return html;
+  }
+
+  // ─── MAP UPDATE ───────────────────────────────────────────────────────────────
+  function updateMap(places, center) {
+    markers.forEach(m => m.setMap(null));
+    markers = [];
+
+    map.setCenter(center);
+    map.setZoom(13);
+
+    places.forEach((place, i) => {
+      if (!place.geometry?.location) return;
+      const marker = new google.maps.Marker({
+        position: place.geometry.location,
+        map,
+        title: place.name,
+        label: {
+          text: `${i + 1}`,
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '12px',
+        },
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 18,
+          fillColor: '#e8a045',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2,
+        },
+      });
+
+      const info = new google.maps.InfoWindow({
+        content: `<div style="font-family:'DM Sans',sans-serif;padding:4px 2px;min-width:160px">
+          <strong style="font-size:14px">${place.name}</strong><br/>
+          <span style="color:#888;font-size:12px">⭐ ${(place.rating||0).toFixed(1)}</span><br/>
+          <span style="color:#666;font-size:11px">${place.vicinity || ''}</span>
+        </div>`
+      });
+
+      marker.addListener('click', () => {
+        info.open(map, marker);
+        document.querySelectorAll('.card')[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+
+      markers.push(marker);
+    });
+  }
+
+  function renderDemoMap(center, places) {
+    const mapEl = document.getElementById('map');
+    mapEl.style.display = 'none';
+
+    const placeholder = document.getElementById('mapPlaceholder');
+    placeholder.style.display = 'flex';
+    placeholder.innerHTML = `
+      <div style="text-align:center;padding:20px">
+        <div style="font-size:40px;margin-bottom:12px">🗺️</div>
+        <p style="color:#9a9080;font-size:14px;margin-bottom:6px">Demo Mode — Map Preview</p>
+        <p style="color:#6a6050;font-size:12px">Add a real Google API key to see the live map</p>
+        <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+          ${places.map((p,i) => `<span style="background:#2a2218;border:1px solid #3a3020;border-radius:20px;padding:4px 12px;font-size:12px;color:#e8a045">📍 ${p.name}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // ─── UI STATES ────────────────────────────────────────────────────────────────
+  function showLoading() {
+    document.getElementById('resultsHeader').style.display = 'none';
+    document.getElementById('cards').innerHTML = `
+      <div class="state-box">
+        <div class="spinner"></div>
+        <h3>Searching...</h3>
+        <p>Finding the best restaurants nearby</p>
+      </div>`;
+  }
+
+  function showError(msg) {
+    document.getElementById('resultsHeader').style.display = 'none';
+    document.getElementById('cards').innerHTML = `
+      <div class="state-box">
+        <div class="state-icon">😕</div>
+        <h3>Nothing Found</h3>
+        <p>${msg}</p>
+      </div>`;
+  }
+
+  // ─── DARK MAP STYLE ───────────────────────────────────────────────────────────
+  const darkMapStyle = [
+    { elementType: 'geometry', stylers: [{ color: '#1a1612' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1612' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#8a7d6c' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2a2418' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1a1612' }] },
+    { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9a8060' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3a2e20' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0f0e18' }] },
+    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#516095' }] },
+    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1e1a14' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1a2010' }] },
+    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#1e1812' }] },
+  ];
+</script>
+</body>
+</html>
